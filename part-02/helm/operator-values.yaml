@@ -1,0 +1,6 @@
+# Values for Kong's kong/kong-operator chart (version pinned in the Makefile: 1.5.0-rapid.2.0,
+# the first with the AI Gateway controllers). The operator only runs the data plane here; the
+# AI Gateway and its configuration are owned by Terraform (part-02/terraform).
+env:
+  ENABLE_CONTROLLER_KONNECT: "true"                # Konnect entities, incl. the mirrored KonnectAIGateway
+  ENABLE_CONTROLLER_AIGATEWAYDATAPLANE: "true"     # AIGatewayDataPlane: the data plane Deployment

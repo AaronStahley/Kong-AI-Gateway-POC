@@ -1,0 +1,27 @@
+# How the operator talks to Konnect, and which gateway it attaches the data plane to.
+apiVersion: konnect.konghq.com/v1alpha1
+kind: KonnectAPIAuthConfiguration
+metadata:
+  name: konnect-api-auth
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: secretRef
+  secretRef:
+    name: {{ .Values.konnect.tokenSecretName }}
+  serverURL: {{ .Values.konnect.serverURL }}
+---
+# Mirror: read-only view of the Terraform-owned gateway (endpoints, certificate registration).
+# The operator never changes or deletes it.
+apiVersion: konnect.konghq.com/v1alpha1
+kind: KonnectAIGateway
+metadata:
+  name: ai-gateway
+  namespace: {{ .Release.Namespace }}
+spec:
+  source: Mirror
+  mirror:
+    konnect:
+      id: {{ required "gatewayId is required: --set gatewayId=$(terraform -chdir=part-02/terraform output -raw gateway_id)" .Values.gatewayId | quote }}
+  konnect:
+    authRef:
+      name: konnect-api-auth

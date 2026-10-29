@@ -42,3 +42,37 @@ terraform.rc
 # Optional: ignore plan files saved before destroying Terraform configuration
 # Uncomment the line below if you want to ignore planout files.
 # planout
+# Data plane certificates and keys (the folder itself is kept via .gitkeep)
+**/certs/*
+!**/certs/.gitkeep
+*.key
+*.crt
+*.pem
+
+# Environment files with real values (templates like *.example stay tracked)
+.env
+.env.*
+*.env
+!*.example
+
+# kongctl plan output (can reference live resource IDs)
+plan.json
+*.plan.json
+
+# Logs
+*.log
+
+# OS / editor clutter
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+.idea/
+
+# Local Claude Code context (not part of the submission)
+CLAUDE.md
+
+
+# Python bytecode cache
+__pycache__/
+*.pyc

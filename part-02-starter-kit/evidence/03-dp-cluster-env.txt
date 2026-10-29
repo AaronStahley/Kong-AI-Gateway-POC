@@ -1,0 +1,6 @@
+KONG_CLUSTER_CERT=/etc/secrets/kong-cluster-cert/tls.crt
+KONG_CLUSTER_CERT_KEY=/etc/secrets/kong-cluster-cert/tls.key
+KONG_CLUSTER_CONTROL_PLANE=https://<id>.us.cp.konghq.com
+KONG_CLUSTER_LISTEN=off
+KONG_CLUSTER_MTLS=pki
+KONG_CLUSTER_TELEMETRY_ENDPOINT=https://<id>.us.tp.konghq.com

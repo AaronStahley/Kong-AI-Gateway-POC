@@ -1,0 +1,44 @@
+# PII service for the sanitizer (ClusterIP only). The policy fails closed, so production needs HA.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-pii-service
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: ai-pii-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ai-pii-service
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ai-pii-service
+    spec:
+      containers:
+        - name: ai-pii-service
+          image: {{ .Values.piiService.image }}
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          resources:
+            {{- toYaml .Values.piiService.resources | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-pii-service
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app.kubernetes.io/name: ai-pii-service
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http

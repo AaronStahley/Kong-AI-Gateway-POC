@@ -1,0 +1,43 @@
+# Helm values for `kong/kong` chart — self-managed, hybrid-mode DATA PLANE ONLY.
+# Deploy against the Control Plane created by ../terraform/main.tf.
+#
+#   helm repo add kong https://charts.konghq.com
+#   helm repo update
+#   kubectl create secret generic kong-cluster-cert \
+#     --from-file=tls.crt=cluster.crt --from-file=tls.key=cluster.key -n kong
+#   helm install kong-dp kong/kong -n kong -f dp-values.yaml \
+#     --set env.cluster_control_plane=<terraform output: control_plane_endpoint> \
+#     --set env.cluster_telemetry_endpoint=<terraform output: telemetry_endpoint>
+#
+# Get the cluster certificate/key for `cluster.crt`/`cluster.key` from the Control Plane you
+# created in Terraform (Konnect Manager -> your Control Plane -> Data Plane Nodes -> Generate
+# Certificate, or the equivalent Konnect API/kongctl call) before installing.
+
+image:
+  repository: kong/kong-gateway
+  tag: "3.4"
+
+env:
+  role: data_plane
+  database: "off"
+  cluster_mtls: pki
+  cluster_cert: /etc/secrets/kong-cluster-cert/tls.crt
+  cluster_cert_key: /etc/secrets/kong-cluster-cert/tls.key
+  lua_ssl_trusted_certificate: system
+  # cluster_control_plane and cluster_telemetry_endpoint are passed via --set above,
+  # from the Terraform outputs (control_plane_endpoint / telemetry_endpoint).
+
+secretVolumes:
+  - kong-cluster-cert
+
+admin:
+  enabled: false
+
+proxy:
+  enabled: true
+  type: LoadBalancer
+
+ingressController:
+  enabled: false
+
+replicaCount: 1

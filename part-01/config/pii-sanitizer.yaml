@@ -1,0 +1,31 @@
+# PII and secret redaction on prompts, via the ai-pii-service container. Attached to both models.
+ai_gateway_policies:
+  - ref: pii-sanitizer
+    ai_gateway: !lookup {id: !env AI_GATEWAY_ID}
+    name: pii-sanitizer
+    display_name: PII sanitizer
+    type: ai-sanitizer
+    enabled: true
+    global: false
+    config:
+      host: ai-pii-service   # container name on the data plane's Docker network
+      port: 8080
+      scheme: http
+      sanitization_mode: INPUT
+      redact_type: placeholder
+      # Identifiers and secrets only: names, url, domain, ip and date match all over source code.
+      anonymize:
+        - ssn
+        - creditcard
+        - bank
+        - email
+        - phone
+        - nationalid
+        - driverlicense
+        - passport
+        - medical
+        - credentials
+      block_if_detected: false            # redact and forward
+      stop_on_error: true                 # fail closed if the PII service is down
+      skip_logging_sanitized_items: true  # log counts, never the matched values
+      recover_redacted: false

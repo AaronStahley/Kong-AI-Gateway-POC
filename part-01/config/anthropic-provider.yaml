@@ -1,0 +1,14 @@
+# Anthropic provider. The API key is read from $ANTHROPIC_PROVIDER_API_KEY at apply time and stored in
+# Konnect; it never appears in this file or in plan/diff output.
+ai_gateway_model_providers:
+  - ref: anthropic
+    ai_gateway: !lookup {id: !env AI_GATEWAY_ID}
+    name: anthropic
+    display_name: Anthropic
+    type: anthropic
+    config:
+      auth:
+        type: basic
+        headers:
+          - name: x-api-key
+            value: !secret {source: !env ANTHROPIC_PROVIDER_API_KEY}

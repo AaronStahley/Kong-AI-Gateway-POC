@@ -1,0 +1,27 @@
+# Required: the Terraform-owned gateway to attach to (`terraform output -raw gateway_id`).
+gatewayId: ""
+
+konnect:
+  # Konnect API for your region (hostname, no scheme). Immutable once installed.
+  serverURL: us.api.konghq.com
+  # Existing Secret with the token under `token` (`make konnect-secret`), kept out of the release.
+  tokenSecretName: konnect-token
+
+dataPlane:
+  # Must match the gateway's runtime version exactly (pinned to 2.2 in Terraform).
+  image: kong/kong-ai-gateway:2.2.0
+  replicas: 1   # token-limit counters are per pod (strategy local); more replicas need redis
+  # Published on the kind node and mapped to localhost:8000 by part-02/kind-config.yaml.
+  nodePort: 30080
+  # Keep equal to the CPU limit. Kong's "auto" counts the node's CPUs, not the pod's (OOMKilled at 20).
+  workerProcesses: 2
+  resources:
+    requests: {cpu: "1", memory: 512Mi}
+    limits: {cpu: "2", memory: 1Gi}
+
+piiService:
+  # Name is fixed: the sanitizer policy (part-02/terraform/policies.tf) calls ai-pii-service:8080.
+  image: kong/ai-pii-service:v0.2.2-en
+  resources:
+    requests: {cpu: 250m, memory: 1Gi}
+    limits: {memory: 2Gi}

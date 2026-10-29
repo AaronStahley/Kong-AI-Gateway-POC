@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "github-via-kong": {
+      "type": "http",
+      "url": "${KONG_PROXY_URL:-http://localhost:8000}/mcp/github",
+      "headers": {
+        "x-api-key": "${KONG_GATEWAY_KEY}",
+        "Authorization": "Bearer ${GITHUB_PAT}"
+      }
+    }
+  }
+}

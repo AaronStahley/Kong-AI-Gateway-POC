@@ -1,0 +1,37 @@
+# The data plane. The operator creates and registers its mTLS certificate and fills in the
+# hybrid-mode settings from the mirrored gateway (by hand in Part 1's docker-compose.yaml).
+apiVersion: aigateway.konghq.com/v1alpha1
+kind: AIGatewayDataPlane
+metadata:
+  name: ai-gateway-dp
+  namespace: {{ .Release.Namespace }}
+spec:
+  controlPlaneRef:
+    type: konnectNamespacedRef
+    konnectNamespacedRef:
+      name: ai-gateway
+  deployment:
+    replicas: {{ .Values.dataPlane.replicas }}
+    podTemplateSpec:
+      spec:
+        containers:
+          - name: aigw   # the operator's container name; these fields are merged into it
+            image: {{ .Values.dataPlane.image }}
+            env:
+              - name: KONG_PROXY_ACCESS_LOG
+                value: /dev/stdout
+              - name: KONG_PROXY_ERROR_LOG
+                value: /dev/stderr
+              - name: KONG_NGINX_WORKER_PROCESSES   # see dataPlane.workerProcesses in values.yaml
+                value: {{ .Values.dataPlane.workerProcesses | quote }}
+            resources:
+              {{- toYaml .Values.dataPlane.resources | nindent 14 }}
+  network:
+    services:
+      ingress:
+        type: NodePort
+        ports:
+          - name: proxy
+            port: 8000          # Kong's plain HTTP proxy listener
+            targetPort: 8000
+            nodePort: {{ .Values.dataPlane.nodePort }}

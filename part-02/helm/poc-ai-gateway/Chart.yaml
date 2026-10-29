@@ -1,0 +1,8 @@
+apiVersion: v2
+name: poc-ai-gateway
+description: >-
+  Kubernetes side of the Kong AI Gateway POC: the AI Gateway data plane (through Kong Operator),
+  attached to the Terraform-managed Konnect AI Gateway, and the PII service its sanitizer calls.
+type: application
+version: 0.1.0
+appVersion: "2.2.0"   # kong/kong-ai-gateway

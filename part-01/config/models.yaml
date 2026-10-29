@@ -1,0 +1,48 @@
+# Model allow-list: clients ask for an alias in the "model" field; anything else is rejected.
+# Claude Code needs two: a main model and a fast one for background tasks.
+ai_gateway_models:
+  - ref: claude-main
+    ai_gateway: !lookup {id: !env AI_GATEWAY_ID}
+    name: claude-main
+    display_name: Claude (main)
+    type: model
+    formats:
+      - type: anthropic
+    config:
+      route:
+        paths: [/]
+        model:
+          body_param: model
+          values: [claude-main]
+    access:
+      auth_strategies: [gateway-key-auth]
+    targets:
+      - name: claude-sonnet-5-5
+        provider: anthropic
+        config:
+          type: anthropic
+    policies: [!ref pii-sanitizer#name, !ref token-limits#name]
+    capabilities: [generate]
+
+  - ref: claude-fast
+    ai_gateway: !lookup {id: !env AI_GATEWAY_ID}
+    name: claude-fast
+    display_name: Claude (fast/background)
+    type: model
+    formats:
+      - type: anthropic
+    config:
+      route:
+        paths: [/]
+        model:
+          body_param: model
+          values: [claude-fast]
+    access:
+      auth_strategies: [gateway-key-auth]
+    targets:
+      - name: claude-haiku-5-5
+        provider: anthropic
+        config:
+          type: anthropic
+    policies: [!ref pii-sanitizer#name, !ref token-limits#name]
+    capabilities: [generate]

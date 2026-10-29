@@ -1,0 +1,12 @@
+# Local stand-in for EKS. NodePort 30080 → localhost:8000, the same address as Part 1, so clients
+# and tests don't change. Stop Part 1 first: only one can hold port 8000.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: poc-part-02
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      - containerPort: 30080   # gateway NodePort
+        hostPort: 8000         # http://localhost:8000
+        listenAddress: "127.0.0.1"
+        protocol: TCP

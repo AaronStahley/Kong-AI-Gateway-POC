@@ -1,0 +1,48 @@
+# Local data plane plus the PII service. ${...} come from part-01/.env; only `environment` reaches
+# the containers. From the repo root: docker compose -f part-01/docker-compose.yaml up -d
+name: poc-part-01   # matches the Konnect AI Gateway name
+
+services:
+  kong-dp:
+    image: kong/kong-ai-gateway:2.2.0   # must match the control plane version exactly
+    container_name: poc-part-01-dp
+    hostname: poc-part-01-dp            # shown as the node name in Konnect's data plane list
+    environment:
+      # Hybrid mode: DB-less data plane that gets its config from Konnect
+      KONG_ROLE: data_plane
+      KONG_DATABASE: "off"
+      KONG_KONNECT_MODE: "on"
+      # This gateway's cluster endpoints (hostnames from the Konnect AI Gateway page)
+      KONG_CLUSTER_CONTROL_PLANE: ${KONG_CLUSTER_CONTROL_PLANE_HOST:?set in part-01/.env}:443
+      KONG_CLUSTER_SERVER_NAME: ${KONG_CLUSTER_CONTROL_PLANE_HOST}
+      KONG_CLUSTER_TELEMETRY_ENDPOINT: ${KONG_CLUSTER_TELEMETRY_HOST:?set in part-01/.env}:443
+      KONG_CLUSTER_TELEMETRY_SERVER_NAME: ${KONG_CLUSTER_TELEMETRY_HOST}
+      # mTLS with the data plane certificate registered with Konnect
+      KONG_CLUSTER_MTLS: pki
+      KONG_CLUSTER_CERT: /etc/kong/certs/tls.crt
+      KONG_CLUSTER_CERT_KEY: /etc/kong/certs/tls.key
+      KONG_LUA_SSL_TRUSTED_CERTIFICATE: system
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+    ports:
+      - "8000:8000"   # proxy (HTTP)
+      - "8443:8443"   # proxy (HTTPS)
+    volumes:
+      - ./certs:/etc/kong/certs:ro
+    # Runs as uid 1001: your group (HOST_GID, default 1000) lets it read tls.key (mode 640).
+    group_add:
+      - "${HOST_GID:-1000}"
+    depends_on:
+      - ai-pii-service
+    healthcheck:
+      test: ["CMD-SHELL", "kong-health"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+    restart: unless-stopped
+
+  # Called by the sanitizer at ai-pii-service:8080. Not published to the host.
+  ai-pii-service:
+    image: kong/ai-pii-service:v0.2.2-en
+    container_name: poc-part-01-pii     # the policy reaches it by service name, ai-pii-service
+    restart: unless-stopped

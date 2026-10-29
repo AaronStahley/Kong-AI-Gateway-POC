@@ -1,0 +1,65 @@
+# Teams and developers: one consumer and key per developer, standing in for the IdP (SSO later swaps
+# the auth strategy; groups stay). Keys come from .env at apply time and are write-only in Konnect.
+ai_gateway_consumer_groups:
+  - ref: engineering
+    ai_gateway: !lookup {id: !env AI_GATEWAY_ID}
+    name: engineering
+    display_name: Engineering
+    consumers: [eng-dev-1, eng-dev-2]
+    policies: []
+
+  - ref: finance
+    ai_gateway: !lookup {id: !env AI_GATEWAY_ID}
+    name: finance
+    display_name: Finance
+    consumers: [fin-dev-1]
+    policies: []
+
+  # Holds rights to destructive GitHub tools (see github-mcp.yaml). Empty in the POC.
+  - ref: github-admins
+    ai_gateway: !lookup {id: !env AI_GATEWAY_ID}
+    name: github-admins
+    display_name: GitHub admins
+    consumers: []
+    policies: []
+
+ai_gateway_consumers:
+  - ref: eng-dev-1
+    ai_gateway: !lookup {id: !env AI_GATEWAY_ID}
+    name: eng-dev-1
+    display_name: Engineering developer 1
+    type: api-key
+    policies: []
+    credentials:
+      - ref: eng-dev-1-key
+        name: eng-dev-1-key
+        display_name: eng-dev-1 key
+        type: api-key
+        api_key: !secret {source: !env ENG_DEV_1_KEY}
+
+  # Second engineer: tells the shared team allowance apart from the per-engineer one.
+  - ref: eng-dev-2
+    ai_gateway: !lookup {id: !env AI_GATEWAY_ID}
+    name: eng-dev-2
+    display_name: Engineering developer 2
+    type: api-key
+    policies: []
+    credentials:
+      - ref: eng-dev-2-key
+        name: eng-dev-2-key
+        display_name: eng-dev-2 key
+        type: api-key
+        api_key: !secret {source: !env ENG_DEV_2_KEY}
+
+  - ref: fin-dev-1
+    ai_gateway: !lookup {id: !env AI_GATEWAY_ID}
+    name: fin-dev-1
+    display_name: Finance developer 1
+    type: api-key
+    policies: []
+    credentials:
+      - ref: fin-dev-1-key
+        name: fin-dev-1-key
+        display_name: fin-dev-1 key
+        type: api-key
+        api_key: !secret {source: !env FIN_DEV_1_KEY}

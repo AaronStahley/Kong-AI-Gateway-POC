@@ -1,0 +1,8 @@
+Attached to Konnect AI Gateway {{ .Values.gatewayId }}.
+
+Check that it comes up:
+  kubectl -n {{ .Release.Namespace }} get konnectaigateway,aigatewaydataplane,pods
+  kubectl -n {{ .Release.Namespace }} logs deploy/ai-pii-service --tail=5
+
+The data plane answers on http://localhost:8000 once its pod is ready (a Kong 404
+"no Route matched" until a request matches a model or MCP route).

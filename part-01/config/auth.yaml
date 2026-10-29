@@ -1,0 +1,14 @@
+# Gateway key in x-api-key (where Claude Code sends ANTHROPIC_API_KEY). Stripped before forwarding;
+# the provider's real Anthropic key is added upstream.
+ai_gateway_auth_strategies:
+  - ref: gateway-key-auth
+    ai_gateway: !lookup {id: !env AI_GATEWAY_ID}
+    name: gateway-key-auth
+    display_name: Gateway key auth
+    type: key-auth
+    config:
+      key_names:
+        - x-api-key
+      key_in_header: true
+      key_in_query: false
+      hide_credentials: true

@@ -1,0 +1,46 @@
+# GitHub's remote MCP server in passthrough mode: Kong adds key auth, per-tool ACLs and analytics.
+# x-api-key (gateway key) is checked and stripped; Authorization (developer's GitHub token) is forwarded.
+# Allow list: engineering gets the tools below, finance none, github-admins (empty) everything else.
+ai_gateway_mcp_servers:
+  - ref: github
+    ai_gateway: !lookup {id: !env AI_GATEWAY_ID}
+    name: github
+    display_name: GitHub
+    type: passthrough-listener
+    config:
+      url: https://api.githubcopilot.com/mcp/
+      route:
+        paths: [/mcp/github]
+        strip_path: true
+      logging:
+        payloads: false
+        audits: true
+    access:
+      auth_strategies: [gateway-key-auth]
+      acl_attribute_type: consumer
+      acls:
+        allow: [github-admins]   # default for every tool not listed below
+    # A tool's ACL replaces the default (no merging), so each entry repeats github-admins.
+    tools:
+      # Context
+      - {name: get_me, access: {acls: {allow: [engineering, github-admins]}}}
+      # Read code
+      - {name: get_file_contents, access: {acls: {allow: [engineering, github-admins]}}}
+      - {name: search_code, access: {acls: {allow: [engineering, github-admins]}}}
+      - {name: list_branches, access: {acls: {allow: [engineering, github-admins]}}}
+      - {name: list_commits, access: {acls: {allow: [engineering, github-admins]}}}
+      - {name: get_commit, access: {acls: {allow: [engineering, github-admins]}}}
+      # Issues: read and comment
+      - {name: issue_read, access: {acls: {allow: [engineering, github-admins]}}}
+      - {name: list_issues, access: {acls: {allow: [engineering, github-admins]}}}
+      - {name: search_issues, access: {acls: {allow: [engineering, github-admins]}}}
+      - {name: add_issue_comment, access: {acls: {allow: [engineering, github-admins]}}}
+      # Branch writes: ACLs can't limit which branch, so enable only once GitHub rulesets protect main.
+      # - {name: create_branch, access: {acls: {allow: [engineering, github-admins]}}}
+      # - {name: create_or_update_file, access: {acls: {allow: [engineering, github-admins]}}}
+      # - {name: push_files, access: {acls: {allow: [engineering, github-admins]}}}
+      # - {name: create_pull_request, access: {acls: {allow: [engineering, github-admins]}}}
+      # Pull requests: read
+      - {name: pull_request_read, access: {acls: {allow: [engineering, github-admins]}}}
+      - {name: list_pull_requests, access: {acls: {allow: [engineering, github-admins]}}}
+    policies: []

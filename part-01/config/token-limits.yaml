@@ -1,0 +1,47 @@
+# Token allowances (prompt + completion), attached to both models. Over the limit: HTTP 429.
+# Every matching entry is enforced. Headers number entries by position, so append new ones:
+# policy-1 engineering team, 2 finance team, 3 per-developer ceiling, 4 per engineer.
+# Demo values: finance's is tiny so the 429 is easy to show. Counters are per node (strategy: local);
+# several replicas need redis.
+ai_gateway_policies:
+  - ref: token-limits
+    ai_gateway: !lookup {id: !env AI_GATEWAY_ID}
+    name: token-limits
+    display_name: Team token limits
+    type: ai-rate-limiting-advanced
+    enabled: true
+    global: false
+    config:
+      strategy: local
+      tokens_count_strategy: total_tokens
+      policies:
+        - match:
+            - type: consumer_group
+              values: [engineering]
+          window_type: sliding
+          limits:
+            - limit: 1000000      # tokens per day
+              window_size: 86400
+        - match:
+            - type: consumer_group
+              values: [finance]
+          window_type: sliding
+          limits:
+            - limit: 1000         # tokens per hour: demo value, trips after a few small requests
+              window_size: 3600
+        - match:                  # ceiling per developer, so no one (even outside a group) is unlimited
+            - type: consumer
+              partition_by: true  # one counter per consumer; without it, one bucket for everyone
+          window_type: sliding
+          limits:
+            - limit: 1000000      # tokens per day: keep >= the largest group allowance
+              window_size: 86400
+        - match:                  # each engineer's share of the engineering allowance
+            - type: consumer_group
+              values: [engineering]
+            - type: consumer      # AND: any consumer in that group, each with its own counter
+              partition_by: true
+          window_type: sliding
+          limits:
+            - limit: 250000       # tokens per day per engineer (team total is 1,000,000)
+              window_size: 86400

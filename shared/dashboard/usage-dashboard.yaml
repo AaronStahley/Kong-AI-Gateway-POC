@@ -1,0 +1,150 @@
+# Usage and enforcement dashboard for both POC gateways (`make -C shared dashboard`). kongctl owns
+# it, in its own namespace, because the Terraform provider has no dashboard resource. Field names
+# come from Konnect's AI Gateway 2 templates; 2.x traffic uses ai_gateway_*, not gateway_service.
+analytics:
+  dashboards:
+    - ref: poc-ai-usage
+      name: POC AI Gateway - usage and enforcement
+      kongctl:
+        namespace: poc-dashboards
+      definition:
+        # Only the POC gateways. IDs are set by shared/Makefile, so the file holds none.
+        preset_filters:
+          - field: ai_gateway
+            operator: in
+            value:
+              - !env PART1_GATEWAY_ID
+              - !env PART2_GATEWAY_ID
+        tiles:
+          # --- Row 0: headline numbers ------------------------------------------------------
+          - type: chart
+            layout: {position: {col: 0, row: 0}, size: {cols: 2, rows: 1}}
+            definition:
+              chart: {type: single_value, chart_title: Total tokens}
+              query:
+                datasource: llm_usage
+                metrics: [total_tokens]
+          - type: chart
+            layout: {position: {col: 2, row: 0}, size: {cols: 2, rows: 1}}
+            definition:
+              chart: {type: single_value, chart_title: AI requests}
+              query:
+                datasource: llm_usage
+                metrics: [ai_request_count]
+          # 429 = token limiter. No provider filter: rejected requests never reach one.
+          - type: chart
+            layout: {position: {col: 4, row: 0}, size: {cols: 2, rows: 1}}
+            definition:
+              chart: {type: single_value, chart_title: Token-limit rejections (429)}
+              query:
+                datasource: llm_usage
+                metrics: [ai_request_count]
+                filters:
+                  - {field: status_code, operator: in, value: ["429"]}
+
+          # --- Rows 1-4: token usage by team, developer and model ---------------------------
+          - type: chart
+            layout: {position: {col: 0, row: 1}, size: {cols: 6, rows: 2}}
+            definition:
+              chart: {type: timeseries_bar, stacked: true, chart_title: Tokens by team over time}
+              query:
+                datasource: llm_usage
+                metrics: [total_tokens]
+                dimensions: [ai_gateway_consumer_group, time]
+                filters:
+                  - {field: ai_gateway_consumer_group, operator: not_empty}
+          - type: chart
+            layout: {position: {col: 0, row: 3}, size: {cols: 3, rows: 2}}
+            definition:
+              chart: {type: top_n, chart_title: Top developers by tokens}
+              query:
+                datasource: llm_usage
+                metrics: [total_tokens, ai_request_count]
+                dimensions: [ai_gateway_consumer]
+                filters:
+                  - {field: ai_gateway_consumer, operator: not_empty}
+                limit: 10
+          - type: chart
+            layout: {position: {col: 3, row: 3}, size: {cols: 3, rows: 2}}
+            definition:
+              chart: {type: donut, chart_title: Tokens by model}
+              query:
+                datasource: llm_usage
+                metrics: [total_tokens]
+                dimensions: [ai_gateway_model]
+                filters:
+                  - {field: ai_gateway_model, operator: not_empty}
+
+          # --- Rows 5-6: requests by model and provider -------------------------------------
+          # Same queries as Konnect's AI Gateway 2 template tiles (including its UNSPECIFIED filter).
+          - type: chart
+            layout: {position: {col: 0, row: 5}, size: {cols: 3, rows: 2}}
+            definition:
+              chart: {type: horizontal_bar, stacked: true, chart_title: GenAI model usage count}
+              query:
+                datasource: llm_usage
+                metrics: [ai_request_count]
+                dimensions: [ai_gateway_model]
+                filters:
+                  - {field: ai_gateway_model, operator: not_empty}
+          - type: chart
+            layout: {position: {col: 3, row: 5}, size: {cols: 3, rows: 2}}
+            definition:
+              chart: {type: vertical_bar, stacked: true, chart_title: GenAI provider usage count}
+              query:
+                datasource: llm_usage
+                metrics: [ai_request_count]
+                dimensions: [ai_provider]
+                filters:
+                  - {field: ai_provider, operator: not_empty}
+                  - {field: ai_provider, operator: not_in, value: [UNSPECIFIED]}
+
+          # --- Rows 7-8: gateway enforcement ------------------------------------------------
+          # 429 token limit, 503 model not allowed, 500 PII failed closed (Anthropic's own errors
+          # land here too; the request log tells them apart).
+          - type: chart
+            layout: {position: {col: 0, row: 7}, size: {cols: 3, rows: 2}}
+            definition:
+              chart: {type: horizontal_bar, stacked: true, chart_title: Requests by team and status code}
+              query:
+                datasource: llm_usage
+                metrics: [ai_request_count]
+                dimensions: [ai_gateway_consumer_group, status_code]
+                filters:
+                  - {field: ai_gateway_consumer_group, operator: not_empty}
+          - type: chart
+            layout: {position: {col: 3, row: 7}, size: {cols: 3, rows: 2}}
+            definition:
+              chart: {type: timeseries_bar, stacked: true, chart_title: Rejected requests over time (4xx/5xx)}
+              query:
+                datasource: llm_usage
+                metrics: [ai_request_count]
+                dimensions: [status_code, time]
+                filters:
+                  - {field: status_code_grouped, operator: in, value: [4XX, 5XX]}
+
+          # --- Rows 9-10: GitHub MCP ---------------------------------------------------------
+          # Charts by team and tool, developers only in top-N, so it scales with headcount.
+          # ACL denials (Kong's 403) carry no MCP details, so they don't appear here.
+          - type: chart
+            layout: {position: {col: 0, row: 9}, size: {cols: 3, rows: 2}}
+            definition:
+              chart: {type: horizontal_bar, stacked: true, chart_title: MCP tool calls by team}
+              query:
+                datasource: agentic_usage
+                metrics: [request_count]
+                dimensions: [ai_gateway_consumer_group, mcp_tool_name]
+                filters:
+                  - {field: ai_gateway_consumer_group, operator: not_empty}
+                  - {field: mcp_tool_name, operator: not_empty}
+          - type: chart
+            layout: {position: {col: 3, row: 9}, size: {cols: 3, rows: 2}}
+            definition:
+              chart: {type: top_n, chart_title: Top MCP users}
+              query:
+                datasource: agentic_usage
+                metrics: [request_count, response_latency_average, error_rate]
+                dimensions: [ai_gateway_consumer]
+                filters:
+                  - {field: ai_gateway_consumer, operator: not_empty}
+                limit: 10
